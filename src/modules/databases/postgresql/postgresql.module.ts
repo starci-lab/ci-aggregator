@@ -1,6 +1,5 @@
 import { DynamicModule, Module } from "@nestjs/common"
-import { TypeOrmModule, TypeOrmModuleOptions } from "@nestjs/typeorm"
-import { envConfig } from "@/modules/env"
+import { TypeOrmModule } from "@nestjs/typeorm"
 import {
     ConfigurableModuleClass,
     OPTIONS_TYPE,
@@ -11,30 +10,22 @@ import {
     LiquidityPoolEntity,
     TokenEntity,
 } from "./entities"
+import { OptionsModule, OptionsService } from "./options"
 
 @Module({})
 export class PostgreSQLModule extends ConfigurableModuleClass {
     public static forRoot(options: typeof OPTIONS_TYPE = {}): DynamicModule {
         const dynamicModule = super.forRoot(options)
 
-        const { host, port, username, password, dbName } = envConfig().postgresql
-
-        const typeOrmOptions: TypeOrmModuleOptions = {
-            type: "postgres",
-            host,
-            port,
-            username,
-            password,
-            database: dbName,
-            autoLoadEntities: true,
-            synchronize: true, // Set to true only in development if you want TypeORM to auto-sync DB schema
-            logging: true,
-        }
-
         return {
             ...dynamicModule,
             imports: [
-                TypeOrmModule.forRoot(typeOrmOptions),
+                TypeOrmModule.forRootAsync({
+                    imports: [OptionsModule.register({})],
+                    inject: [OptionsService],
+                    useFactory: (optionsService: OptionsService) =>
+                        optionsService.getTypeOrmModuleOptions(),
+                }),
                 this.forFeature(),
             ],
         }
