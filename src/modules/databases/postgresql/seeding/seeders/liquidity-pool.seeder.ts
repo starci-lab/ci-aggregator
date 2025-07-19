@@ -16,17 +16,21 @@ export class LiquidityPoolSeeder implements Seeder {
         await repository.save([
             {
                 id: LiquidityPoolId.MonadTestnetBeanLpMonadUsdc1,
-                address: "0xCa810D095e90Daae6e867c19DF6D9A8C56db2c89",
+                address: "0x264e9b75723d75E3c607627D8E21d2C758DB4c80",
                 poolType: PoolTypeEnum.Amm,
                 chainKey: ChainKey.Monad,
                 network: Network.Testnet,
                 tokenXId: TokenId.MonadTestnetMon,
                 tokenYId: TokenId.MonadTestnetUsdc,
+                methodSwapExactEthForTokens: "swapExactEthForTokens",
+                methodSwapExactTokensForEth: "swapExactTokensForEth",
+                methodSwapExactTokensForTokens: "swapExactTokensForTokens",
                 dexId: DexId.Bean,
+                routerAddress: "0xCa810D095e90Daae6e867c19DF6D9A8C56db2c89",
             },
             {
                 id: LiquidityPoolId.MonadTestnetPancakeSwapLpMonadUsdc1,
-                address: "0x94D220C58A23AE0c2eE29344b00A30D1c2d9F1bc",
+                address: "0x06A3C44115D436dF5D71475498bE4a220343AC14",
                 poolType: PoolTypeEnum.Clmm,
                 chainKey: ChainKey.Monad,
                 network: Network.Testnet,

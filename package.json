@@ -27,11 +27,14 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
     "class-transformer": "^0.5.1",
+    "ethers": "^6.15.0",
+    "graphlib": "^2.1.8",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.25",
-    "typeorm-extension": "^3.7.1"
+    "typeorm-extension": "^3.7.1",
+    "weighted-round-robin": "^2.0.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

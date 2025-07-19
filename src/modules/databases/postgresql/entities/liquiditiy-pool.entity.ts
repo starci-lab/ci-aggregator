@@ -62,6 +62,13 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
   })
       poolType?: PoolTypeEnum
 
+  @Field(() => String, { nullable: true})
+  @Column({
+      name: "router_address",
+      nullable: true
+  })
+      routerAddress?: string
+
   @Field({ nullable: true })
   @Column({ name: "tick", nullable: true })
       tick?: string
@@ -69,6 +76,24 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
   @Field({ nullable: true })
   @Column({ name: "method", nullable: true })
       method?: string
+
+  @Field(() => String, {
+      nullable: true,
+  })
+  @Column({ name: "method_swap_exact_eth_for_tokens", nullable: true })
+      methodSwapExactEthForTokens?: string
+
+  @Field(() => String, {
+      nullable: true,
+  })
+  @Column({ name: "method_swap_exact_tokens_for_eth", nullable: true })
+      methodSwapExactTokensForEth?: string
+
+  @Field(() => String, {
+      nullable: true,
+  })
+  @Column({ name: "method_swap_exact_tokens_for_tokens", nullable: true })
+      methodSwapExactTokensForTokens?: string
 
   @Field({ nullable: true })
   @Column({ name: "request_pattern", type: "json", nullable: true })
