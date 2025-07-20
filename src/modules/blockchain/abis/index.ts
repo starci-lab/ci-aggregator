@@ -1,1 +1,1 @@
-export * from "./amm"
+export * from "./uniswap-v2-pair"

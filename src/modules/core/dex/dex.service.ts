@@ -18,7 +18,7 @@ export class DexService implements ICore, OnModuleInit {
             await this.quote({
                 amountIn: "1000000000000000000",
                 fromToken: NATIVE,
-                toToken: "0x760AfE86e5de5fa0Ee542fc7B7B713e1c5425701",
+                toToken: "0xf817257fed379853cDe0fa4F97AB987181B1E5Ea",
                 deadline: 1721424000,
                 slippage: 0.5,
                 userAddress: "0xA7C1d79C7848c019bCb669f1649459bE9d076DA3",
@@ -38,16 +38,11 @@ export class DexService implements ICore, OnModuleInit {
         chainKey = ChainKey.Monad,
         network = Network.Testnet,
     }: QuoteParams): Promise<QuoteResult> {
-    // get token from
-        const fromTokenEntity = this.getTokenEntity(fromToken, chainKey, network)
-        const toTokenEntity = this.getTokenEntity(toToken, chainKey, network)
+        // get token from
         // get all liquidity pools
         const liquidityPools = this.memDbService.liquidityPools
-        await this.quoteService.quoteAmmSinglePool({
-            fromToken: fromTokenEntity,
-            toToken: toTokenEntity,
-            liquidityPool: liquidityPools[0],
-            amountIn,
+        await this.quoteService.getAmmReserves({
+            liquidityPool: liquidityPools[1],
             chainKey,
             network
         })

@@ -20,12 +20,14 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@lukeed/wrr": "^0.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/graphql": "^13.1.0",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "balancer-round-robin": "^1.0.7",
     "class-transformer": "^0.5.1",
     "ethers": "^6.15.0",
     "graphlib": "^2.1.8",
@@ -34,7 +36,8 @@
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.25",
     "typeorm-extension": "^3.7.1",
-    "weighted-round-robin": "^2.0.2"
+    "weighted-round-robin": "^2.0.2",
+    "wrr-pool": "^1.1.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

@@ -1,29 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import WRR from "weighted-round-robin"
+import { IUpstreamOptions, UpstreamList } from "balancer-round-robin"
 
-export interface WeightedRoundRobin<T = string> {
-    add(value: T, weight: number): void;
-    next(): T;
-}
-
-export interface ValueWeight<T=string> {
-    value: T
-    weight: number
-}
-
-export interface CreateInstanceParams<T> {
-    valueWeights: Array<ValueWeight<T>>
+export interface CreateInstanceParams {
+  list: Array<IUpstreamOptions>;
 }
 
 @Injectable()
 export class WeightedRoundRobinService {
-    createInstance<T>({
-        valueWeights,
-    }: CreateInstanceParams<T>): WeightedRoundRobin<T> {
-        const wrr = WRR()
-        valueWeights.forEach(({ value, weight }) => {
-            wrr.add(value, weight)
-        })
+    createInstance({ list }: CreateInstanceParams): UpstreamList {
+        const wrr = new UpstreamList()
+        wrr.setList(list)
         return wrr
     }
 }

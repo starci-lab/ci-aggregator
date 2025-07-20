@@ -1,117 +1,74 @@
-import { Injectable, OnModuleInit } from "@nestjs/common"
-import { LiquidityPoolEntity, TokenEntity } from "@/modules/databases"
-import { NATIVE } from "../core.interface"
+import { Injectable } from "@nestjs/common"
+import { LiquidityPoolEntity } from "@/modules/databases"
 import { ethers } from "ethers"
-import { ammAbi, blockchainRpc, ChainKey, Network } from "@/modules/blockchain"
-import { WeightedRoundRobin, WeightedRoundRobinService } from "@/modules/balancer"
+import {
+    uniswapV2PairAbi,
+    blockchainRpc,
+    ChainKey,
+    Network,
+} from "@/modules/blockchain"
+import { WeightedRoundRobinService } from "@/modules/balancer"
+import { UpstreamList } from "balancer-round-robin"
 
 @Injectable()
-export class QuoteService implements OnModuleInit {
-    private wrrMap: Record<ChainKey, Record<Network, WeightedRoundRobin<string>>>
-    constructor(
-        private readonly wrrService: WeightedRoundRobinService,
-    ) {
+export class QuoteService {
+    private wrrMap: Partial<
+    Record<ChainKey, Partial<Record<Network, UpstreamList>>>
+  > = {}
+    // we store the price in the redis cache, and each time we get the price, we update the cache
+    
+    constructor(private readonly wrrService: WeightedRoundRobinService) {
         for (const chainKey of Object.values(ChainKey)) {
-            for (const network of Object.values(Network)) {
-                this.wrrMap[chainKey][network] = this.wrrService.createInstance({
-                    valueWeights: blockchainRpc()[chainKey][network].map(({
-                        url,
-                        weight
-                    }) => ({
-                        value: url,
-                        weight
-                    }))
-                })
+            if (!this.wrrMap[chainKey]) {
+                this.wrrMap[chainKey] = {}
             }
-        }   
-    }
-    onModuleInit() {
-        console.log("QuoteService initialized")
+            for (const network of Object.values(Network)) {
+                const list = blockchainRpc[chainKey]?.[network] || []
+        this.wrrMap[chainKey]![network] = this.wrrService.createInstance({
+            list,
+        })
+            }
+        }
     }
 
-    async quoteAmmSinglePool({
-        amountIn,
-        fromToken,
-        toToken,
+    async getAmmReserves({
         liquidityPool,
         chainKey,
-        network
-    }: QuoteAmmParams) {
-        // Determine the swap method name
-        let methodName: string | undefined
-        if (fromToken.address === NATIVE) {
-            methodName = liquidityPool.methodSwapExactEthForTokens
-        } else if (toToken.address === NATIVE) {
-            methodName = liquidityPool.methodSwapExactTokensForEth
-        } else {
-            methodName = liquidityPool.methodSwapExactTokensForTokens
+        network,
+    }: GetAmmReservesParams): Promise<GetAmmReservesResult> {
+    // Determine the swap method name
+        const wrr = this.wrrMap?.[chainKey]?.[network]
+        if (!wrr) {
+            throw new Error("Weighted Round Robin not found")
         }
-
-        if (!methodName) {
-            throw new Error("Swap method not found in pool config")
-        }
-
-        // Prepare ethers contract
-        if (!liquidityPool.routerAddress) {
-            throw new Error("Router address not found")
-        }
-        const wrr = this.wrrMap[chainKey][network]
-        const provider = new ethers.JsonRpcProvider(wrr.next()) // replace with actual rpc or inject
+        const provider = new ethers.JsonRpcProvider(wrr.get().server) // replace with actual rpc or inject
         const contract = new ethers.Contract(
-            liquidityPool.routerAddress,
-            ammAbi,
+            liquidityPool.address,
+            uniswapV2PairAbi,
             provider,
         )
-
-        // This is just an example. You need to build correct calldata based on method.
-        // Usually for a quote (static call), you'd use `callStatic`:
         try {
-            const result = await contract.callStatic[methodName](
-                ...this.buildSwapArgs({
-                    amountIn,
-                    fromToken,
-                    toToken,
-                    liquidityPool,
-                    chainKey,
-                    network
-                }),
-            )
-
-            console.log("Swap quote result:", result)
-            return result
+            const [reserve0, reserve1] = await contract
+                .getFunction("getReserves")
+                .staticCall()
+            return {
+                reserve0,
+                reserve1,
+            }
         } catch (error) {
             console.error("Swap quote error:", error)
             throw new Error("Failed to quote")
         }
     }
-
-    // 🔧 Helper to build method arguments depending on swap type
-    private buildSwapArgs({
-        amountIn,
-        fromToken,
-        toToken,
-        liquidityPool,
-    }: QuoteAmmParams): any[] {
-        const path = [fromToken.address, toToken.address]
-        const minAmountOut = 1 // just a placeholder
-        const to = ethers.ZeroAddress // Or user address
-        const deadline = Math.floor(Date.now() / 1000) + 1800 // 30 min from now
-
-        if (fromToken.address === NATIVE) {
-            return [minAmountOut, path, to, deadline]
-        } else if (toToken.address === NATIVE) {
-            return [amountIn, minAmountOut, path, to, deadline]
-        } else {
-            return [amountIn, minAmountOut, path, to, deadline]
-        }
-    }
 }
 
-export interface QuoteAmmParams {
-  amountIn: string; // The input amount (in raw units, e.g. wei or smallest unit)
+export interface GetAmmReservesParams {
   liquidityPool: LiquidityPoolEntity;
-  fromToken: TokenEntity;
-  toToken: TokenEntity;
   chainKey: ChainKey;
   network: Network;
+}
+
+export interface GetAmmReservesResult {
+  reserve0: bigint;
+  reserve1: bigint;
 }

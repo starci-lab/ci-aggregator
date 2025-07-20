@@ -31,3 +31,7 @@ export enum PoolTypeEnum {
     Stable = "stable", // curve-style stable swap
 }
   
+export interface DexRequestPattern {
+    method: string
+    params?: Record<string, any>      // Path params, e.g. { symbol: "BTCUSDT" }
+}

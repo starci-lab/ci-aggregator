@@ -3,7 +3,7 @@ import { StringAbstractEntity } from "./abstract"
 import { DexEntity } from "./dex.entity"
 import { TokenEntity } from "./token.entity"
 import { Field, ObjectType } from "@nestjs/graphql"
-import { PoolTypeEnum, RequestPattern, ResponsePattern } from "./types"
+import { PoolTypeEnum, ResponsePattern } from "./types"
 import { Network } from "@/modules/blockchain"
 import { ChainKey } from "@/modules/blockchain"
 
@@ -72,32 +72,6 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
   @Field({ nullable: true })
   @Column({ name: "tick", nullable: true })
       tick?: string
-
-  @Field({ nullable: true })
-  @Column({ name: "method", nullable: true })
-      method?: string
-
-  @Field(() => String, {
-      nullable: true,
-  })
-  @Column({ name: "method_swap_exact_eth_for_tokens", nullable: true })
-      methodSwapExactEthForTokens?: string
-
-  @Field(() => String, {
-      nullable: true,
-  })
-  @Column({ name: "method_swap_exact_tokens_for_eth", nullable: true })
-      methodSwapExactTokensForEth?: string
-
-  @Field(() => String, {
-      nullable: true,
-  })
-  @Column({ name: "method_swap_exact_tokens_for_tokens", nullable: true })
-      methodSwapExactTokensForTokens?: string
-
-  @Field({ nullable: true })
-  @Column({ name: "request_pattern", type: "json", nullable: true })
-      requestPattern?: RequestPattern
 
   @Field({ nullable: true })
   @Column({ name: "response_pattern", type: "json", nullable: true })
