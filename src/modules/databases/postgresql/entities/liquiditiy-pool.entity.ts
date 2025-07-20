@@ -42,8 +42,8 @@ export class LiquidityPoolEntity extends StringAbstractEntity {
       tokenYId: string
 
   @Field({ nullable: true })
-  @Column({ name: "fee_tier", nullable: true })
-      feeTier?: string
+  @Column({ name: "fee_tier", nullable: true, type: "float" })
+      feeTier?: number
 
   @Field({ name: "network", description: "Blockchain network" })
   @Column({ name: "network", default: Network.Testnet })

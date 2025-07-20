@@ -24,6 +24,7 @@ export class LiquidityPoolSeeder implements Seeder {
                 tokenYId: TokenId.MonadTestnetUsdc,
                 dexId: DexId.Bean,
                 routerAddress: "0xCa810D095e90Daae6e867c19DF6D9A8C56db2c89",
+                feeTier: 0.3 * 0.01, // 0.3%
             },
             {
                 id: LiquidityPoolId.MonadTestnetPancakeSwapLpMonadUsdc1,
@@ -34,6 +35,7 @@ export class LiquidityPoolSeeder implements Seeder {
                 tokenXId: TokenId.MonadTestnetWmon,
                 tokenYId: TokenId.MonadTestnetUsdc,
                 dexId: DexId.PancakeSwap,
+                feeTier: 0.25 * 0.01, // 0.25%
             },
         ])
     }
