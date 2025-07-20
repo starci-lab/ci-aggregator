@@ -1,16 +1,15 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
-import { MemDbService, TokenEntity } from "@/modules/databases"
+import { MemDbService, PoolTypeEnum, TokenEntity } from "@/modules/databases"
 import { ICore, NATIVE, QuoteParams, QuoteResult, TokenAddress } from "../core.interface"
 import { ChainKey, Network } from "@/modules/blockchain"
-import { QuoteService } from "./quote.service"
+import { AmmService } from "./amm.service"
 
 @Injectable()
 export class DexService implements ICore, OnModuleInit {
     private readonly logger = new Logger(DexService.name)
     constructor(
         private readonly memDbService: MemDbService,
-        private readonly quoteService: QuoteService,
-    
+        private readonly ammService: AmmService,
     ) {}
 
     async onModuleInit() {
@@ -40,9 +39,11 @@ export class DexService implements ICore, OnModuleInit {
     }: QuoteParams): Promise<QuoteResult> {
         // get token from
         // get all liquidity pools
-        const liquidityPools = this.memDbService.liquidityPools
-        await this.quoteService.getAmmReserves({
-            liquidityPool: liquidityPools[1],
+        const liquidityPools = this.memDbService.liquidityPools.filter(
+            (liquidityPool) => liquidityPool.poolType === PoolTypeEnum.Amm,
+        )
+        await this.ammService.getAmmReserves({
+            liquidityPool: liquidityPools[0],
             chainKey,
             network
         })

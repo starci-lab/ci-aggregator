@@ -1,4 +1,4 @@
-export const uniswapV2PairAbi = [
+export const ammAbi = [
     {
         anonymous: false,
         inputs: [

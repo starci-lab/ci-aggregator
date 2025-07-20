@@ -3,10 +3,11 @@ import {
     ConfigurableModuleClass,
 } from "./dex.module-definition"
 import { DexService } from "./dex.service"
-import { QuoteService } from "./quote.service"
+import { AmmService } from "./amm.service"
+import { ClmmService } from "./clmm.service"
 
 @Module({
-    providers: [DexService, QuoteService],
+    providers: [DexService, AmmService, ClmmService],
     exports: [DexService],
 })
 export class DexModule extends ConfigurableModuleClass {}

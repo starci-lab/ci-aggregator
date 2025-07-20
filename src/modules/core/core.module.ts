@@ -4,14 +4,12 @@ import {
 } from "./core.module-definition"
 import { CoreService } from "./core.service"
 import { DexModule } from "./dex"
-import { QuoteService } from "./dex/quote.service"
 
 @Module({
     imports: [DexModule.register({})],
     providers: [
-        QuoteService,
         CoreService,
     ],
-    exports: [QuoteService, CoreService],
+    exports: [CoreService],
 })
 export class CoreModule extends ConfigurableModuleClass {}
