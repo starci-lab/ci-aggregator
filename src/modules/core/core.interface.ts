@@ -4,14 +4,14 @@ import { LiquidityPoolEntity } from "../databases"
 export interface IPool {
     quote(
         params: QuoteParams
-    ): Promise<number>
+    ): Promise<QuoteResult>
 }
 
 export interface QuoteParams {
     liquidityPool: LiquidityPoolEntity,
     chainKey: ChainKey,
     network: Network,
-    amountIn: bigint,
+    amountIn: number,
     xForY: boolean,
 }
 
@@ -19,3 +19,6 @@ export interface QuoteResult {
     amount: number
     estimatedGas: number
 }
+
+export type TokenAddress = string
+export const NATIVE = "native"

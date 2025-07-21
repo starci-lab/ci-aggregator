@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common"
+import { Inject, Injectable, Logger, OnModuleInit } from "@nestjs/common"
 import { LiquidityPoolEntity, MemDbService } from "@/modules/databases"
 import { ethers } from "ethers"
 import {
@@ -16,7 +16,7 @@ import { Cron } from "@nestjs/schedule"
 import { PoolTypeEnum } from "@/modules/databases"
 
 @Injectable()
-export class AmmService {
+export class AmmService implements OnModuleInit {
     private readonly logger = new Logger(AmmService.name)
     private wrrMap: Partial<
     Record<ChainKey, Partial<Record<Network, UpstreamList>>>
@@ -41,6 +41,10 @@ export class AmmService {
         })
             }
         }
+    }
+
+    async onModuleInit() {
+        await this.updateAmmReserves()
     }
 
   // update the amm reserves every 3 seconds

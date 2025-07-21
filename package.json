@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@ethers-ext/provider-multicall": "^6.0.0-beta.3",
     "@keyv/redis": "^5.0.0",
     "@lukeed/wrr": "^0.0.2",
     "@nestjs/cache-manager": "^3.0.1",
@@ -30,12 +31,15 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@uniswap/v3-sdk": "^3.25.2",
     "balancer-round-robin": "^1.0.7",
     "cache-manager": "^7.0.1",
     "cacheable": "^1.10.2",
     "class-transformer": "^0.5.1",
+    "decimal.js": "^10.6.0",
     "ethers": "^6.15.0",
     "graphlib": "^2.1.8",
+    "jsbi": "^3.2.5",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
-import { Field, ObjectType, Float } from "@nestjs/graphql"
+import { Field, ObjectType, Int } from "@nestjs/graphql"
 import { LiquidityPoolEntity } from "./liquiditiy-pool.entity"
 import { ChainKey, Network } from "@/modules/blockchain"
 
@@ -35,8 +35,8 @@ export class TokenEntity extends StringAbstractEntity {
   @Column({ name: "chain_key" })
       chainKey: ChainKey
 
-  @Field(() => Float, { name: "decimals", description: "Token decimal places" })
-  @Column("decimal", { name: "decimals", precision: 10, scale: 2, default: 6 })
+  @Field(() => Int, { name: "decimals", description: "Token decimal places" })
+  @Column({ name: "decimals", default: 18 })
       decimals: number
 
   @Field({ name: "logoUrl", description: "Token logo URL", nullable: true })

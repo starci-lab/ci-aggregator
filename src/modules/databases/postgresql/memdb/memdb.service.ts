@@ -32,7 +32,9 @@ export class MemDbService implements OnModuleInit {
             this.dataSource.manager.find(TokenEntity),
             this.dataSource.manager.find(LiquidityPoolEntity, {
                 relations: {
-                    dex: true
+                    dex: true,
+                    tokenX: true,
+                    tokenY: true
                 }
             }),
         ])

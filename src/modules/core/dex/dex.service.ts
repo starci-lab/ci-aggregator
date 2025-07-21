@@ -1,82 +1,28 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
-import { MemDbService, PoolTypeEnum, TokenEntity } from "@/modules/databases"
-import { ICore, NATIVE, QuoteParams, QuoteResult, TokenAddress } from "../core.interface"
-import { ChainKey, Network } from "@/modules/blockchain"
+import { MemDbService, PoolTypeEnum } from "@/modules/databases"
 import { AmmService } from "./amm.service"
+import { ClmmService } from "./clmm.service"
+import { ChainKey, Network } from "@/modules/blockchain"
 
 @Injectable()
-export class DexService implements ICore, OnModuleInit {
+export class DexService implements OnModuleInit {
     private readonly logger = new Logger(DexService.name)
     constructor(
         private readonly memDbService: MemDbService,
         private readonly ammService: AmmService,
+        private readonly clmmService: ClmmService,
     ) {}
 
     async onModuleInit() {
-        console.log(
-            await this.quote({
-                amountIn: "1000000000000000000",
-                fromToken: NATIVE,
-                toToken: "0xf817257fed379853cDe0fa4F97AB987181B1E5Ea",
-                deadline: 1721424000,
-                slippage: 0.5,
-                userAddress: "0xA7C1d79C7848c019bCb669f1649459bE9d076DA3",
-                maxHops: 2,
-            }),
+        const liquidityPool = this.memDbService.liquidityPools.find(
+            lp => lp.poolType === PoolTypeEnum.Clmm
         )
-    }
-
-    async quote({
-        amountIn,
-        fromToken,
-        toToken,
-        deadline,
-        slippage,
-        userAddress,
-        maxHops = 2,
-        chainKey = ChainKey.Monad,
-        network = Network.Testnet,
-    }: QuoteParams): Promise<QuoteResult> {
-        // get token from
-        // get all liquidity pools
-        const liquidityPools = this.memDbService.liquidityPools.filter(
-            (liquidityPool) => liquidityPool.poolType === PoolTypeEnum.Amm,
-        )
-        await this.ammService.getAmmReserves({
-            liquidityPool: liquidityPools[0],
-            chainKey,
-            network
+        if (!liquidityPool) throw new Error("C")
+        const x = await this.clmmService.getClmmState({
+            chainKey: ChainKey.Monad,
+            network: Network.Testnet,
+            liquidityPool
         })
-        return {
-            amountOut: "0",
-            route: [],
-        }
-    }
-
-    private getTokenEntity(
-        tokenAddress: TokenAddress,
-        chainKey: ChainKey,
-        network: Network,
-    ) {
-        let tokenEntity: TokenEntity | undefined
-        if (tokenAddress === NATIVE) {
-            tokenEntity = this.memDbService.tokens.find(
-                (token) =>
-                    token.native &&
-          token.network === network &&
-          token.chainKey === chainKey,
-            )
-        } else {
-            tokenEntity = this.memDbService.tokens.find(
-                (token) =>
-                    token.address === tokenAddress &&
-          token.network === network &&
-          token.chainKey === chainKey,
-            )
-        }
-        if (!tokenEntity) {
-            throw new Error(`Token ${tokenAddress} not found`)
-        }
-        return tokenEntity
+        console.log(x)
     }
 }
