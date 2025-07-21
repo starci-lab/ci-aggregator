@@ -60,7 +60,7 @@ implements IPool, OnModuleInit, OnApplicationBootstrap
     async onApplicationBootstrap() {
         // test quote
         const { amount } = await this.quote({
-            amountIn: 1,
+            amountIn: 10,
             chainKey: ChainKey.Monad,
             liquidityPool: this.memDbService.liquidityPools.find(
                 (pool) =>
@@ -134,7 +134,6 @@ implements IPool, OnModuleInit, OnApplicationBootstrap
           clmmAbi,
           provider,
       )
-
       try {
           const tickPromises = ticks.map((tick) =>
               contract
@@ -314,6 +313,7 @@ implements IPool, OnModuleInit, OnApplicationBootstrap
               nextTick <= maxTickInWord
                   ) {
                       const realTick = nextTick * Number(tickSpacing)
+                      console.log(realTick)
                       const tickData = await this.getTickData(
                           liquidityPool,
                           chainKey,
