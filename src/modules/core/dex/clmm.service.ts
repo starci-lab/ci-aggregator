@@ -23,7 +23,13 @@ import { WeightedRoundRobinService } from "@/modules/balancer"
 import { UpstreamList } from "balancer-round-robin"
 import { Sha256Service } from "@/modules/cryptography"
 import { Cron } from "@nestjs/schedule"
-import { QuoteParams, QuoteResult, IPool } from "../core.interface"
+import {
+    IPool,
+    QuoteExactInParams,
+    QuoteParams,
+    QuoteExactOutParams,
+    QuoteResult,
+} from "../core.interface"
 import { MulticallProvider } from "@ethers-ext/provider-multicall"
 import { TickDataProvider } from "@uniswap/v3-sdk"
 import { CurrencyAmount, Token } from "@uniswap/sdk-core"
@@ -57,21 +63,45 @@ implements IPool, OnModuleInit, OnApplicationBootstrap
         }
     }
 
+    async quote({
+        exactIn = true,
+        ...params
+    }: QuoteParams): Promise<QuoteResult> {
+        if (exactIn) {
+            return this.quoteExactIn({
+                ...params,
+                amountIn: params.amountSpecified,
+            })
+        } else {
+            return this.quoteExactOut({
+                ...params,
+                amountOut: params.amountSpecified
+            })
+        }
+    }
+
     async onApplicationBootstrap() {
-        // test quote
+    // test quote, off-chain logic with v3 pool
+    // we use 20 ticks to compute the price
+        const liquidityPool = this.memDbService.liquidityPools.find(
+            (pool) =>
+                pool.poolType === PoolTypeEnum.Clmm &&
+        pool.chainKey === ChainKey.Monad &&
+        pool.network === Network.Testnet,
+        )!
         const { amount } = await this.quote({
-            amountIn: 10,
+            amountSpecified: 10,
             chainKey: ChainKey.Monad,
-            liquidityPool: this.memDbService.liquidityPools.find(
-                (pool) =>
-                    pool.poolType === PoolTypeEnum.Clmm &&
-          pool.chainKey === ChainKey.Monad &&
-          pool.network === Network.Testnet,
-            )!,
+            liquidityPool,
             network: Network.Testnet,
             xForY: true,
+            exactIn: false
         })
-        console.log(amount)
+        console.log(
+            `Swap 10 ${liquidityPool.tokenX.symbol} to ${liquidityPool.tokenY.symbol}`,
+        )
+        console.log(`Pool address: ${liquidityPool.address}`)
+        console.log(`Amount: ${amount}`)
     }
 
     async onModuleInit() {
@@ -261,98 +291,183 @@ implements IPool, OnModuleInit, OnApplicationBootstrap
       return null
   }
 
-  public async quote({
+  public async quoteExactIn({
       amountIn,
       chainKey,
       liquidityPool,
       network,
       xForY,
-  }: QuoteParams): Promise<QuoteResult> {
-      try {
-          const clmmState = await this.getClmmState({
-              liquidityPool,
-              chainKey,
-              network,
-          })
-          const tokenX = new Token(
-              0, // we do not need the chain id since we dont do on-chain token
-              liquidityPool.tokenX.address || "",
-              liquidityPool.tokenX.decimals,
-              liquidityPool.tokenX.symbol,
-              liquidityPool.tokenX.name,
-          )
-          const tokenY = new Token(
-              0, // we do not need the chain id since we dont do on-chain token
-              liquidityPool.tokenY.address || "",
-              liquidityPool.tokenY.decimals,
-              liquidityPool.tokenY.symbol,
-              liquidityPool.tokenY.name,
-          )
-          const tickDataProvider: TickDataProvider = {
-              getTick: async (tick) => {
+  }: QuoteExactInParams): Promise<QuoteResult> {
+      const clmmState = await this.getClmmState({
+          liquidityPool,
+          chainKey,
+          network,
+      })
+      const tokenX = new Token(
+          0, // we do not need the chain id since we dont do on-chain token
+          liquidityPool.tokenX.address || "",
+          liquidityPool.tokenX.decimals,
+          liquidityPool.tokenX.symbol,
+          liquidityPool.tokenX.name,
+      )
+      const tokenY = new Token(
+          0, // we do not need the chain id since we dont do on-chain token
+          liquidityPool.tokenY.address || "",
+          liquidityPool.tokenY.decimals,
+          liquidityPool.tokenY.symbol,
+          liquidityPool.tokenY.name,
+      )
+      const tickDataProvider: TickDataProvider = {
+          getTick: async (tick) => {
+              const tickData = await this.getTickData(
+                  liquidityPool,
+                  chainKey,
+                  network,
+                  BigInt(tick),
+              )
+              if (!tickData) throw new Error("Tick data not found")
+              return {
+                  liquidityNet: tickData.liquidityNet.toString(),
+              }
+          },
+          nextInitializedTickWithinOneWord: async (tick, lte, tickSpacing) => {
+              let compressed = Math.floor(Number(tick) / Number(tickSpacing))
+              if (!lte) compressed += 1
+              const wordPos = Math.floor(compressed / 256)
+              const minTickInWord = wordPos * 256
+              const maxTickInWord = minTickInWord + 255
+              let nextTick = compressed
+              while (nextTick >= minTickInWord && nextTick <= maxTickInWord) {
+                  const realTick = nextTick * Number(tickSpacing)
                   const tickData = await this.getTickData(
                       liquidityPool,
                       chainKey,
                       network,
-                      BigInt(tick)
+                      BigInt(realTick),
                   )
-                  if (!tickData) throw new Error("Tick data not found")
-                  return {
-                      liquidityNet: tickData.liquidityNet.toString(),
+                  if (tickData && BigInt(tickData.liquidityNet) !== 0n) {
+                      return [realTick, true]
                   }
-              },
-              nextInitializedTickWithinOneWord: async (tick, lte, tickSpacing) => {
-                  let compressed = Math.floor(Number(tick) / Number(tickSpacing))
-                  if (!lte) compressed += 1
-                  const wordPos = Math.floor(compressed / 256)
-                  const minTickInWord = wordPos * 256
-                  const maxTickInWord = minTickInWord + 255
-                  let nextTick = compressed
-                  while (
-                      nextTick >= minTickInWord &&
-              nextTick <= maxTickInWord
-                  ) {
-                      const realTick = nextTick * Number(tickSpacing)
-                      console.log(realTick)
-                      const tickData = await this.getTickData(
-                          liquidityPool,
-                          chainKey,
-                          network,
-                          BigInt(realTick)
-                      )
-                      if (tickData && BigInt(tickData.liquidityNet) !== 0n) {
-                          return [realTick, true]
-                      }
-                      nextTick += lte ? -1 : 1
-                  }
-      
-                  const boundaryTick = (lte ? minTickInWord : maxTickInWord) * Number(tickSpacing)
-                  return [boundaryTick, false]
-              },
-          }
-          const v3Pool = new V3Pool(
-              tokenX,
-              tokenY,
-              computeFeeTierRaw(liquidityPool.feeTier), // fee 0.25% = 2500
-              Number(clmmState.tickSpacing),
-              clmmState.sqrtPriceX96.toString(),
-              clmmState.liquidity.toString(),
-              Number(clmmState.tick),
-              tickDataProvider
-          )
+                  nextTick += lte ? -1 : 1
+              }
 
-          const tokenIn = xForY ? tokenX : tokenY
-          const [amount] = await v3Pool.getOutputAmount(
-              CurrencyAmount.fromRawAmount(tokenIn, computeRaw(amountIn, tokenIn.decimals).toString()),
-          )
-          const amountOut = amount.toExact()
-          return {
-              amount: Number(amountOut),
-              estimatedGas: 0,
-          }
-      } catch (err) {
-          this.logger.error("CLMM quote failed", err)
-          throw new Error("Failed to quote CLMM")
+              const boundaryTick =
+          (lte ? minTickInWord : maxTickInWord) * Number(tickSpacing)
+              return [boundaryTick, false]
+          },
+      }
+      const v3Pool = new V3Pool(
+          tokenX,
+          tokenY,
+          computeFeeTierRaw(liquidityPool.feeTier), // fee 0.25% = 2500
+          Number(clmmState.tickSpacing),
+          clmmState.sqrtPriceX96.toString(),
+          clmmState.liquidity.toString(),
+          Number(clmmState.tick),
+          tickDataProvider,
+      )
+
+      const tokenIn = xForY ? tokenX : tokenY
+      const [amount] = await v3Pool.getOutputAmount(
+          CurrencyAmount.fromRawAmount(
+              tokenIn,
+              computeRaw(amountIn, tokenIn.decimals).toString(),
+          ),
+      )
+      const amountOut = amount.toExact()
+      return {
+          amount: Number(amountOut),
+          estimatedGas: 0,
+      }
+  }
+
+  public async quoteExactOut({
+      amountOut,
+      chainKey,
+      liquidityPool,
+      network,
+      xForY,
+  }: QuoteExactOutParams): Promise<QuoteResult> {
+      const clmmState = await this.getClmmState({
+          liquidityPool,
+          chainKey,
+          network,
+      })
+      const tokenX = new Token(
+          0, // we do not need the chain id since we dont do on-chain token
+          liquidityPool.tokenX.address || "",
+          liquidityPool.tokenX.decimals,
+          liquidityPool.tokenX.symbol,
+          liquidityPool.tokenX.name,
+      )
+      const tokenY = new Token(
+          0, // we do not need the chain id since we dont do on-chain token
+          liquidityPool.tokenY.address || "",
+          liquidityPool.tokenY.decimals,
+          liquidityPool.tokenY.symbol,
+          liquidityPool.tokenY.name,
+      )
+      const tickDataProvider: TickDataProvider = {
+          getTick: async (tick) => {
+              const tickData = await this.getTickData(
+                  liquidityPool,
+                  chainKey,
+                  network,
+                  BigInt(tick),
+              )
+              if (!tickData) throw new Error("Tick data not found")
+              return {
+                  liquidityNet: tickData.liquidityNet.toString(),
+              }
+          },
+          nextInitializedTickWithinOneWord: async (tick, lte, tickSpacing) => {
+              let compressed = Math.floor(Number(tick) / Number(tickSpacing))
+              if (!lte) compressed += 1
+              const wordPos = Math.floor(compressed / 256)
+              const minTickInWord = wordPos * 256
+              const maxTickInWord = minTickInWord + 255
+              let nextTick = compressed
+              while (nextTick >= minTickInWord && nextTick <= maxTickInWord) {
+                  const realTick = nextTick * Number(tickSpacing)
+                  const tickData = await this.getTickData(
+                      liquidityPool,
+                      chainKey,
+                      network,
+                      BigInt(realTick),
+                  )
+                  if (tickData && BigInt(tickData.liquidityNet) !== 0n) {
+                      return [realTick, true]
+                  }
+                  nextTick += lte ? -1 : 1
+              }
+
+              const boundaryTick =
+          (lte ? minTickInWord : maxTickInWord) * Number(tickSpacing)
+              return [boundaryTick, false]
+          },
+      }
+      const v3Pool = new V3Pool(
+          tokenX,
+          tokenY,
+          computeFeeTierRaw(liquidityPool.feeTier), // fee 0.25% = 2500
+          Number(clmmState.tickSpacing),
+          clmmState.sqrtPriceX96.toString(),
+          clmmState.liquidity.toString(),
+          Number(clmmState.tick),
+          tickDataProvider,
+      )
+
+      const tokenOut = xForY ? tokenY : tokenX
+      const [amount] = await v3Pool.getInputAmount(
+          CurrencyAmount.fromRawAmount(
+              tokenOut,
+              computeRaw(amountOut, tokenOut.decimals).toString(),
+          ),
+      )
+      const amountIn = amount.toExact()
+      return {
+          amount: Number(amountIn),
+          estimatedGas: 0,
       }
   }
 

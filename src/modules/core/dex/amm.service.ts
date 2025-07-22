@@ -14,9 +14,11 @@ import { CACHE_MANAGER } from "@nestjs/cache-manager"
 import { Sha256Service } from "@/modules/cryptography"
 import { Cron } from "@nestjs/schedule"
 import { PoolTypeEnum } from "@/modules/databases"
+import { IPool, QuoteExactInParams, QuoteResult, QuoteExactOutParams, QuoteParams } from "../core.interface"
+import { computeAfterFee, computeBeforeFee, computeDenomination, computeRaw } from "@/modules/common"
 
 @Injectable()
-export class AmmService implements OnModuleInit {
+export class AmmService implements OnModuleInit, IPool {
     private readonly logger = new Logger(AmmService.name)
     private wrrMap: Partial<
     Record<ChainKey, Partial<Record<Network, UpstreamList>>>
@@ -43,8 +45,114 @@ export class AmmService implements OnModuleInit {
         }
     }
 
+    async quote({
+        exactIn = true,
+        ...params
+    }: QuoteParams): Promise<QuoteResult> {
+        if (exactIn) {
+            return this.quoteExactIn({
+                ...params,
+                amountIn: params.amountSpecified,
+            })
+        } else {
+            return this.quoteExactOut({
+                ...params,
+                amountOut: params.amountSpecified
+            })
+        }
+    }
+
+    async onApplicationBootstrap() {
+        // test quote, off-chain logic with v3 pool
+        // we use 20 ticks to compute the price
+        const liquidityPool = this.memDbService.liquidityPools.find(
+            (pool) =>
+                pool.poolType === PoolTypeEnum.Amm &&
+      pool.chainKey === ChainKey.Monad &&
+      pool.network === Network.Testnet,
+        )!
+        const { amount } = await this.quote({
+            amountSpecified: 10,
+            chainKey: ChainKey.Monad,
+            liquidityPool,
+            network: Network.Testnet,
+            xForY: true,
+            exactIn: false
+        })
+        console.log(`Swap 10 ${liquidityPool.tokenX.symbol} to ${liquidityPool.tokenY.symbol}`)
+        console.log(`Pool address: ${liquidityPool.address}`)
+        console.log(`Amount: ${amount}`)
+    }
+
     async onModuleInit() {
         await this.updateAmmReserves()
+    }
+
+    public async quoteExactIn({
+        amountIn,
+        chainKey,
+        liquidityPool,
+        network,
+        xForY,
+    }: QuoteExactInParams): Promise<QuoteResult> {
+        const { reserve0, reserve1 } = await this.getAmmReserves({
+            liquidityPool,
+            chainKey,
+            network,
+        })
+        
+        const tokenIn = xForY ? liquidityPool.tokenX : liquidityPool.tokenY
+        const tokenOut = xForY ? liquidityPool.tokenY : liquidityPool.tokenX
+            
+        const reserveIn = xForY ? reserve0 : reserve1
+        const reserveOut = xForY ? reserve1 : reserve0
+        const k = reserveIn * reserveOut
+        const reserveInAfter = reserveIn + computeRaw(amountIn, tokenIn.decimals)
+        const reserveOutAfter = k / reserveInAfter
+        const amountOutRaw = reserveOut-reserveOutAfter 
+        const amountOut = computeAfterFee(
+            amountOutRaw,
+            liquidityPool.feeTier
+        )
+        return {
+            amount: computeDenomination(amountOut, tokenOut.decimals),
+            estimatedGas: 0,
+        }
+    }
+
+    public async quoteExactOut({
+        amountOut,
+        chainKey,
+        liquidityPool,
+        network,
+        xForY,
+    }: QuoteExactOutParams): Promise<QuoteResult> {
+        const { reserve0, reserve1 } = await this.getAmmReserves({
+            liquidityPool,
+            chainKey,
+            network,
+        })
+        
+        const tokenIn = xForY ? liquidityPool.tokenX : liquidityPool.tokenY
+        const tokenOut = xForY ? liquidityPool.tokenY : liquidityPool.tokenX
+            
+        const reserveIn = xForY ? reserve0 : reserve1
+        const reserveOut = xForY ? reserve1 : reserve0
+        const k = reserveIn * reserveOut
+        const reserveOutAfter = reserveOut - computeBeforeFee(
+            computeRaw(
+                amountOut, tokenOut.decimals
+            )      
+        )
+        if (reserveOutAfter < 0) {
+            throw new Error("Insufficient liquidity")
+        }
+        const reserveInAfter = k / reserveOutAfter
+        const amountIn = reserveInAfter - reserveIn
+        return {
+            amount: computeDenomination(amountIn, tokenIn.decimals),
+            estimatedGas: 0,
+        }
     }
 
   // update the amm reserves every 3 seconds
@@ -80,9 +188,12 @@ export class AmmService implements OnModuleInit {
       network,
   }: GetAmmReservesParams): Promise<GetAmmReservesResult> {
       const cacheKey = this.createCacheKey(liquidityPool, chainKey, network)
-      const cachedReserves = await this.cacheManager.get(cacheKey)
+      const cachedReserves = await this.cacheManager.get<CachedAmmReservesResult>(cacheKey)
       if (cachedReserves) {
-          return cachedReserves as GetAmmReservesResult
+          return {
+              reserve0: BigInt(cachedReserves.reserve0),
+              reserve1: BigInt(cachedReserves.reserve1),
+          }
       }
       return this.queryAmmReserves({
           liquidityPool,
@@ -113,7 +224,7 @@ export class AmmService implements OnModuleInit {
               .getFunction("getReserves")
               .staticCall()
           // permanent store the reserves in the cache
-          await this.cacheManager.set(
+          await this.cacheManager.set<CachedAmmReservesResult>(
               cacheKey,
               {
                   reserve0: reserve0.toString(),
@@ -122,8 +233,8 @@ export class AmmService implements OnModuleInit {
               0,
           )
           return {
-              reserve0,
-              reserve1,
+              reserve0: BigInt(reserve0),
+              reserve1: BigInt(reserve1),
           }
       } catch (error) {
           console.error("Swap quote error:", error)
@@ -146,3 +257,8 @@ export interface QueryAmmReservesResult {
 }
 
 export type GetAmmReservesResult = QueryAmmReservesResult;
+
+export interface CachedAmmReservesResult {
+    reserve0: string;
+    reserve1: string;
+}
