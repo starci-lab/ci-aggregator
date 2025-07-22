@@ -4,9 +4,16 @@ import { DexService } from "./dex.service"
 import { AmmService } from "./amm.service"
 import { ClmmService } from "./clmm.service"
 import { QueryTokenService } from "./query-token.service"
+import { GraphService } from "./graph.service"
 
 @Module({
-    providers: [QueryTokenService, DexService, AmmService, ClmmService],
+    providers: [
+        QueryTokenService,
+        DexService,
+        AmmService,
+        ClmmService,
+        GraphService,
+    ],
     exports: [DexService],
 })
 export class DexModule extends ConfigurableModuleClass {}

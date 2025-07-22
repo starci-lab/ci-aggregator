@@ -377,7 +377,6 @@ implements IPool, OnModuleInit, OnApplicationBootstrap
       const amountOut = amount.toExact()
       return {
           amount: Number(amountOut),
-          estimatedGas: 0,
       }
   }
 
@@ -467,7 +466,6 @@ implements IPool, OnModuleInit, OnApplicationBootstrap
       const amountIn = amount.toExact()
       return {
           amount: Number(amountIn),
-          estimatedGas: 0,
       }
   }
 

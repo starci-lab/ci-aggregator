@@ -28,7 +28,6 @@ export interface ResponsePattern {
 export enum PoolTypeEnum {
     Amm = "amm", // constant product like Uniswap V2
     Clmm = "clmm", // concentrated liquidity like Uniswap V3
-    Stable = "stable", // curve-style stable swap
 }
   
 export interface DexRequestPattern {

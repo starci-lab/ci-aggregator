@@ -116,7 +116,6 @@ export class AmmService implements OnModuleInit, IPool {
         )
         return {
             amount: computeDenomination(amountOut, tokenOut.decimals),
-            estimatedGas: 0,
         }
     }
 
@@ -151,7 +150,6 @@ export class AmmService implements OnModuleInit, IPool {
         const amountIn = reserveInAfter - reserveIn
         return {
             amount: computeDenomination(amountIn, tokenIn.decimals),
-            estimatedGas: 0,
         }
     }
 

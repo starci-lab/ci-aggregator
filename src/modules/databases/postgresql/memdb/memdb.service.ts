@@ -1,13 +1,14 @@
 import { Injectable, Logger, OnModuleInit } from "@nestjs/common"
 import { DataSource } from "typeorm"
 import { InjectDataSource } from "@nestjs/typeorm"
-import { LiquidityPoolEntity, TokenEntity } from "../entities"
+import { DexEntity, LiquidityPoolEntity, TokenEntity } from "../entities"
 import { Interval } from "@nestjs/schedule"
 
 @Injectable()
 export class MemDbService implements OnModuleInit {
     public tokens: Array<TokenEntity> = []
     public liquidityPools: Array<LiquidityPoolEntity> = []
+    public dexes: Array<DexEntity> = []
 
     private readonly logger = new Logger(MemDbService.name)
 
@@ -28,7 +29,7 @@ export class MemDbService implements OnModuleInit {
     }
 
     private async reloadAll() {
-        const [tokens, liquidityPools] = await Promise.all([
+        const [tokens, liquidityPools, dexes] = await Promise.all([
             this.dataSource.manager.find(TokenEntity),
             this.dataSource.manager.find(LiquidityPoolEntity, {
                 relations: {
@@ -37,9 +38,11 @@ export class MemDbService implements OnModuleInit {
                     tokenY: true
                 }
             }),
+            this.dataSource.manager.find(DexEntity),
         ])
         this.tokens = tokens
         this.liquidityPools = liquidityPools
+        this.dexes = dexes
         this.logger.verbose("Memdb cache updated")
     }
 

@@ -34,7 +34,6 @@ export interface QuoteParams {
 
 export interface QuoteResult {
     amount: number
-    estimatedGas: number
 }
 
 export interface QuoteExactOutParams {
