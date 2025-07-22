@@ -21,6 +21,7 @@ export class TokenSeeder implements Seeder {
                 network: Network.Testnet,
                 decimals: 18,
                 native: true,
+                wrappedTokenId: TokenId.MonadTestnetWmon,
             },
             {
                 id: TokenId.MonadTestnetWmon,

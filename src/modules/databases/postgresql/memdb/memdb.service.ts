@@ -30,12 +30,16 @@ export class MemDbService implements OnModuleInit {
 
     private async reloadAll() {
         const [tokens, liquidityPools, dexes] = await Promise.all([
-            this.dataSource.manager.find(TokenEntity),
+            this.dataSource.manager.find(TokenEntity, {
+                relations: {
+                    wrappedToken: true
+                }
+            }),
             this.dataSource.manager.find(LiquidityPoolEntity, {
                 relations: {
                     dex: true,
                     tokenX: true,
-                    tokenY: true
+                    tokenY: true,
                 }
             }),
             this.dataSource.manager.find(DexEntity),

@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany } from "typeorm"
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from "typeorm"
 import { StringAbstractEntity } from "./abstract"
 import { Field, ObjectType, Int } from "@nestjs/graphql"
 import { LiquidityPoolEntity } from "./liquiditiy-pool.entity"
@@ -85,4 +85,14 @@ export class TokenEntity extends StringAbstractEntity {
       (liquiditiyPool) => liquiditiyPool.tokenY,
   )
       liquidityPoolsAsY?: Array<LiquidityPoolEntity>
+    
+  @OneToOne(() => TokenEntity, (token) => token.wrappedToken, {
+      nullable: true
+  })
+  @JoinColumn({ name: "wrapped_token_id" })
+      wrappedToken?: TokenEntity
+
+  @Field(() => String)
+  @Column({ name: "wrapped_token_id", nullable: true })
+      wrappedTokenId?: string
 }

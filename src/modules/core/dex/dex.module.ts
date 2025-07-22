@@ -5,6 +5,7 @@ import { AmmService } from "./amm.service"
 import { ClmmService } from "./clmm.service"
 import { QueryTokenService } from "./query-token.service"
 import { GraphService } from "./graph.service"
+import { PathService } from "./path.service"
 
 @Module({
     providers: [
@@ -13,6 +14,7 @@ import { GraphService } from "./graph.service"
         AmmService,
         ClmmService,
         GraphService,
+        PathService
     ],
     exports: [DexService],
 })

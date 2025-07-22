@@ -35,7 +35,7 @@ export const computeRaw = (
     const mutiplier = JSBI.BigInt(10 ** decimals)
     const decimalMultiplier = JSBI.BigInt(10 ** fractionDigits)
     const result = JSBI.multiply(
-        JSBI.BigInt(amount * 10 ** fractionDigits),
+        JSBI.BigInt((amount * 10 ** fractionDigits).toFixed()),
         mutiplier,
     )
     const result2 = JSBI.divide(result, decimalMultiplier)
